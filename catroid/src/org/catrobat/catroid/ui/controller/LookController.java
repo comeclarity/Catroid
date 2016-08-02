@@ -54,6 +54,7 @@ import org.catrobat.catroid.common.DroneVideoLookData;
 import org.catrobat.catroid.common.LookData;
 import org.catrobat.catroid.content.Sprite;
 import org.catrobat.catroid.io.StorageHandler;
+import org.catrobat.catroid.sensing.CollisionPolygonCreationTask;
 import org.catrobat.catroid.ui.LookViewHolder;
 import org.catrobat.catroid.ui.ScriptActivity;
 import org.catrobat.catroid.ui.adapter.LookBaseAdapter;
@@ -292,7 +293,13 @@ public final class LookController {
 		lookData.setLookFilename(fileName);
 		lookData.setLookName(name);
 		lookDataList.add(lookData);
+		//lookData.loadOrCreateCollisionPolygon();
 		fragment.updateLookAdapter(lookData);
+
+		CollisionPolygonCreationTask creation_task = new CollisionPolygonCreationTask(lookData);
+		Thread creation_thread = new Thread(creation_task);
+		lookData.collisionPolygonCalculationThread = creation_thread;
+		creation_thread.start();
 	}
 
 	public void loadDroneVideoImageToProject(String defaultImageName, int imageId, Activity activity, List<LookData>
@@ -364,10 +371,10 @@ public final class LookController {
 		activity.sendBroadcast(new Intent(ScriptActivity.ACTION_BRICK_LIST_CHANGED));
 	}
 
+
 	public void loadImageIntoCatroid(Intent intent, Activity activity, List<LookData> lookDataList,
 			LookFragment fragment) {
 		String originalImagePath = "";
-
 		//get path of image - will work for most applications
 		Bundle bundle = intent.getExtras();
 		if (bundle != null) {
@@ -516,6 +523,13 @@ public final class LookController {
 			return;
 		}
 		LookData lookDataToDelete = lookDataList.get(position);
+		Thread collisionPolygonCalculationThread = lookDataToDelete.collisionPolygonCalculationThread;
+		if(collisionPolygonCalculationThread != null)
+		{
+			Log.i("Delete Look", "interrupting running collisionPolygonCalculationThread");
+			lookDataToDelete.cancelCollisionPolygonCalculation();
+		}
+
 		boolean isBackPackLook = lookDataToDelete.isBackpackLookData;
 
 		if (!otherLookDataItemsHaveAFileReference(lookDataToDelete)) {

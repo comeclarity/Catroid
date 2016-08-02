@@ -22,10 +22,15 @@
  */
 package org.catrobat.catroid.content;
 
+import android.graphics.Point;
+import android.graphics.PointF;
+
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
+import com.badlogic.gdx.math.Polygon;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.scenes.scene2d.Action;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -36,6 +41,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Array;
 
+import org.catrobat.catroid.common.Constants;
 import org.catrobat.catroid.common.DroneVideoLookData;
 import org.catrobat.catroid.common.LookData;
 
@@ -59,8 +65,11 @@ public class Look extends Image {
 	private ParallelAction whenParallelAction;
 	private boolean allActionsAreFinished = false;
 	private BrightnessContrastHueShader shader;
+	private Point touchingPoint;
+	private float previousDegree;
+	private ArrayList<Look> collidingLooks = new ArrayList<Look>();
 
-	public Look(Sprite sprite) {
+	public Look(final Sprite sprite) {
 		this.sprite = sprite;
 		setBounds(0f, 0f, 0f, 0f);
 		setOrigin(0f, 0f);
@@ -74,6 +83,8 @@ public class Look extends Image {
 		this.addListener(new InputListener() {
 			@Override
 			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+				//With this we can calculate, if we tapped on our Sprite
+				touchingPoint = new Point((int) x, (int) y);
 				if (doTouchDown(x, y, pointer)) {
 					return true;
 				}
@@ -84,6 +95,18 @@ public class Look extends Image {
 				}
 				setTouchable(Touchable.enabled);
 				return false;
+			}
+
+			@Override
+			public void touchDragged(InputEvent event, float x, float y, int pointer) {
+				//Touch was dragged, update point
+				touchingPoint = new Point((int) x, (int) y);
+			}
+
+			@Override
+			public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+				//We stoped our touch, delete point
+				touchingPoint = null;
 			}
 		});
 
@@ -256,6 +279,13 @@ public class Look extends Image {
 		imageChanged = true;
 	}
 
+	public boolean isTouched() {
+		if (touchingPoint != null) {
+			return isSpriteTouched(touchingPoint.x, touchingPoint.y);
+		}
+		return false;
+	}
+
 	public boolean getAllActionsAreFinished() {
 		return allActionsAreFinished;
 	}
@@ -330,12 +360,60 @@ public class Look extends Image {
 		return convertStageAngleToCatroidAngle(getRotation());
 	}
 
+	private PointF rotatePointAroundPoint(PointF center, PointF point, float rotation) {
+		float sin = (float)Math.sin(rotation);
+		float cos = (float)Math.cos(rotation);
+		point.x -= center.x;
+		point.y -= center.y;
+		float x_new = point.x * cos - point.y * sin;
+		float y_new = point.x * sin + point.y * cos;
+		point.x = x_new + center.x;
+		point.y = y_new + center.y;
+		return point;
+	}
+
+	public Rectangle getHitbox() {
+		float x = getXInUserInterfaceDimensionUnit() - getWidthInUserInterfaceDimensionUnit()/2;
+		float y = getYInUserInterfaceDimensionUnit() - getHeightInUserInterfaceDimensionUnit()/2;
+		float width = getWidthInUserInterfaceDimensionUnit();
+		float height = getHeightInUserInterfaceDimensionUnit();
+		float vertices[];
+		if (getRotation() == 0) {
+			vertices = new float[] {
+				x, y,
+				x, y + height,
+				x + width, y + height,
+				x + width, y
+			};
+		} else {
+			PointF center = new PointF(x + width / 2f, y + height / 2f);
+			PointF upper_left = rotatePointAroundPoint(center, new PointF(x, y), getRotation());
+			PointF upper_right = rotatePointAroundPoint(center, new PointF(x, y + height), getRotation());
+			PointF lower_right = rotatePointAroundPoint(center, new PointF(x + width, y + height), getRotation());
+			PointF lower_left = rotatePointAroundPoint(center, new PointF(x + width, y), getRotation());
+			vertices = new float[] {
+				upper_left.x, upper_left.y,
+				upper_right.x, upper_right.y,
+				lower_right.x, lower_right.y,
+				lower_left.x, lower_left.y
+			};
+		}
+
+		Polygon p = new Polygon(vertices);
+		return p.getBoundingRectangle();
+	}
+
 	public void setDirectionInUserInterfaceDimensionUnit(float degrees) {
-		setRotation(convertCatroidAngleToStageAngle(degrees));
+		if (previousDegree != degrees) {
+			newCollisionData();
+			setRotation((-degrees + DEGREE_UI_OFFSET) % 360);
+			previousDegree = degrees;
+		}
 	}
 
 	public void changeDirectionInUserInterfaceDimensionUnit(float changeDegrees) {
-		setRotation(getRotation() - changeDegrees);
+		newCollisionData();
+		setRotation((getRotation() - changeDegrees) % 360);
 	}
 
 	public float getSizeInUserInterfaceDimensionUnit() {
@@ -522,4 +600,64 @@ public class Look extends Image {
 			end();
 		}
 	}
+
+
+	private boolean isSpriteTouched(float x, float y) {
+		//This is a fix for libGDX using a mirrored y Axis
+		y = (getHeight() - 1) - y;
+		//We take a square around our touching point, and if there is color,
+		//we know that there is the Sprite, so we increase our pixelVal. When
+		//this exceeds a threshhold, the sprite was touched
+		x = x - Constants.COLLISION_WITH_FINGER_AREA_SIZE/2;
+		y = y - Constants.COLLISION_WITH_FINGER_AREA_SIZE/2;
+		int pixelVal = 0;
+		for (int x_pixmap = (int) x; x_pixmap < x + Constants.COLLISION_WITH_FINGER_AREA_SIZE; x_pixmap++) {
+			for (int y_pixmap = (int) y; y_pixmap < y + Constants.COLLISION_WITH_FINGER_AREA_SIZE; y_pixmap++) {
+				if (pixmap != null && pixmap.getPixel(x_pixmap, y_pixmap) > 0) {
+					pixelVal++;
+				}
+			}
+		}
+
+		if (pixelVal > Constants.COLLISION_WITH_FINGER_PIXEL_TRESHHOLD) {
+			return true;
+		}
+
+		return false;
+	}
+
+	public Polygon[] getCurrentCollisionPolygon()
+	{
+		Polygon[] original_polygons = getLookData().getCollisionPolygons();
+		if(original_polygons == null)
+			return null;
+
+		Polygon[] transformed_polygons = new Polygon[original_polygons.length];
+
+		for(int p = 0; p < transformed_polygons.length; p++)
+		{
+			Polygon poly = new Polygon(original_polygons[p].getTransformedVertices());
+			poly.translate(getX(), getY());
+			poly.setRotation(getRotation());
+			poly.setScale(getScaleX(), getScaleY());
+			poly.setOrigin(getOriginX(),getOriginY());
+			transformed_polygons[p] = poly;
+		}
+		return transformed_polygons;
+	}
+
+	private void newCollisionData() {
+		if (collidingLooks.size() != 0) collidingLooks = new ArrayList<Look>();
+	}
+
+	protected void positionChanged() {
+		newCollisionData();
+	}
+
+	protected void sizeChanged() {
+		newCollisionData();
+	}
+
+
+
 }

@@ -664,4 +664,10 @@ public class Sprite implements Serializable, Cloneable {
 			}
 		}
 	}
+
+	public void createCollisionPolygons() {
+		for (LookData lookData : lookList) {
+			lookData.loadOrCreateCollisionPolygon();
+		}
+	}
 }

@@ -26,6 +26,7 @@ import com.badlogic.gdx.scenes.scene2d.actions.TemporalAction;
 
 import org.catrobat.catroid.ProjectManager;
 import org.catrobat.catroid.content.Sprite;
+import org.catrobat.catroid.sensing.CollisionDetection;
 
 public class IfOnEdgeBounceAction extends TemporalAction {
 	private Sprite sprite;

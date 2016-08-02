@@ -24,6 +24,7 @@ package org.catrobat.catroid.formulaeditor;
 
 import android.content.Context;
 import android.graphics.drawable.Drawable;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
@@ -89,6 +90,12 @@ public class Formula implements Serializable {
 	public void updateVariableReferences(String oldName, String newName, Context context) {
 		internFormula.updateVariableReferences(oldName, newName, context);
 		formulaTree.updateVariableReferences(oldName, newName);
+		displayText = null;
+	}
+
+	public void updateCollisionFormulas(String oldName, String newName, Context context) {
+		internFormula.updateCollisionFormula(oldName, newName, context);
+		formulaTree.updateCollisionFormula(oldName, newName);
 		displayText = null;
 	}
 

@@ -25,6 +25,7 @@ package org.catrobat.catroid.formulaeditor;
 import android.util.Log;
 
 import org.catrobat.catroid.ProjectManager;
+import org.catrobat.catroid.common.Constants;
 import org.catrobat.catroid.content.Sprite;
 import org.catrobat.catroid.content.bricks.UserBrick;
 
@@ -244,6 +245,10 @@ public class InternFormulaParser {
 				currentElement.replaceElement(FormulaElement.ElementType.STRING, string());
 				break;
 
+			case COLLISION_FORMULA:
+				currentElement.replaceElement(collision());
+				break;
+
 			default:
 				throw new InternFormulaParserException("Parse Error");
 		}
@@ -262,6 +267,39 @@ public class InternFormulaParser {
 		}
 
 		FormulaElement lookTree = new FormulaElement(FormulaElement.ElementType.USER_VARIABLE,
+				currentToken.getTokenStringValue(), null);
+
+		getNextToken();
+		return lookTree;
+	}
+
+	private FormulaElement collision() throws InternFormulaParserException {
+		int start = 0;
+		int end = currentToken.getTokenStringValue().indexOf(Constants.COLLIDES_WITH_TAG) - 1;
+		String firstSpriteName = currentToken.getTokenStringValue().substring(start, end);
+
+		start = end + Constants.COLLIDES_WITH_TAG.length() + 2;
+		end = currentToken.getTokenStringValue().length();
+		String secondSpriteName = currentToken.getTokenStringValue().substring(start, end);
+
+		boolean formulaOk;
+		int spriteCount = 0;
+
+		for (Sprite sprite : ProjectManager.getInstance().getCurrentProject().getSpriteList()) {
+			if (sprite.getName().compareTo(firstSpriteName) == 0 || sprite.getName().compareTo(secondSpriteName) == 0) {
+				spriteCount++;
+			}
+		}
+
+		formulaOk = (spriteCount == 2)
+				|| ((spriteCount == 1) && currentToken.getTokenStringValue().contains(Constants.COLLISION_TYPE_TAPPED))
+				|| ((spriteCount == 1) && currentToken.getTokenStringValue().contains(Constants.COLLISION_TYPE_EDGE));
+
+		if (!formulaOk) {
+			throw new InternFormulaParserException("Parse Error, Sprite was not found");
+		}
+
+		FormulaElement lookTree = new FormulaElement(FormulaElement.ElementType.COLLISION_FORMULA,
 				currentToken.getTokenStringValue(), null);
 
 		getNextToken();

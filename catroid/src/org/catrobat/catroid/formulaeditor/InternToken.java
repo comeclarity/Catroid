@@ -52,6 +52,12 @@ public class InternToken {
 		}
 	}
 
+	public void updateCollisionFormula(String oldName, String newName) {
+		if (internTokenType == InternTokenType.COLLISION_FORMULA && tokenStringValue.contains(oldName)) {
+			tokenStringValue = tokenStringValue.replace(oldName, newName);
+		}
+	}
+
 	public boolean isNumber() {
 		return internTokenType == InternTokenType.NUMBER;
 	}

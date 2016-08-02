@@ -31,6 +31,7 @@ import com.badlogic.gdx.ApplicationListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.FPSLogger;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -39,6 +40,8 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
@@ -156,6 +159,7 @@ public class StageListener implements ApplicationListener {
 	public boolean axesOn = false;
 
 	private byte[] thumbnail;
+	private ShapeRenderer collisionPolygonDebugRenderer;
 
 	private InputListener inputListener = null;
 
@@ -238,6 +242,7 @@ public class StageListener implements ApplicationListener {
 			};
 		}
 		stage.addListener(inputListener);
+		collisionPolygonDebugRenderer = new ShapeRenderer();
 	}
 
 	void menuResume() {
@@ -460,6 +465,8 @@ public class StageListener implements ApplicationListener {
 			testPixels = ScreenUtils.getFrameBufferPixels(testX, testY, testWidth, testHeight, false);
 			makeTestPixels = false;
 		}
+
+		drawDebugCollisionPolygons();
 	}
 
 	private List<String> reconstructNotifyActions(Map<String, List<String>> actions) {
@@ -712,5 +719,29 @@ public class StageListener implements ApplicationListener {
 
 	public void removeActor(Look look) {
 		look.remove();
+	}
+
+	public void drawDebugCollisionPolygons()
+	{
+
+		collisionPolygonDebugRenderer.setProjectionMatrix(camera.combined);
+		collisionPolygonDebugRenderer.setAutoShapeType(true);
+		collisionPolygonDebugRenderer.setColor(Color.MAGENTA);
+		collisionPolygonDebugRenderer.begin();
+		int lineWidth = 5;
+		Gdx.gl20.glLineWidth(lineWidth / camera.zoom);
+		for(Sprite sprite : sprites.subList(1,sprites.size()))
+		{
+			if(!sprite.isBackgroundObject)
+			{
+				Polygon[] polygons_for_sprite = sprite.look.getCurrentCollisionPolygon();
+				if(polygons_for_sprite != null)
+				{
+					for(Polygon polygon_to_draw : polygons_for_sprite)
+						collisionPolygonDebugRenderer.polygon(polygon_to_draw.getTransformedVertices());
+				}
+			}
+		}
+		collisionPolygonDebugRenderer.end();
 	}
 }

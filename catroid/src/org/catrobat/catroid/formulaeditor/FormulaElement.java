@@ -22,21 +22,36 @@
  */
 package org.catrobat.catroid.formulaeditor;
 
+import android.graphics.Bitmap;
+import android.graphics.Rect;
 import android.util.Log;
+
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 
 import org.catrobat.catroid.ProjectManager;
 import org.catrobat.catroid.bluetooth.base.BluetoothDevice;
 import org.catrobat.catroid.common.CatroidService;
 import org.catrobat.catroid.common.ServiceProvider;
+import org.catrobat.catroid.common.Constants;
+import org.catrobat.catroid.content.BroadcastHandler;
+import org.catrobat.catroid.content.BroadcastListener;
+import org.catrobat.catroid.content.Look;
 import org.catrobat.catroid.content.Sprite;
 import org.catrobat.catroid.content.bricks.Brick;
 import org.catrobat.catroid.devices.arduino.Arduino;
 import org.catrobat.catroid.devices.raspberrypi.RPiSocketConnection;
 import org.catrobat.catroid.devices.raspberrypi.RaspberryPiService;
 import org.catrobat.catroid.utils.TouchUtil;
+import org.catrobat.catroid.sensing.CollisionDetection;
+import org.catrobat.catroid.stage.StageListener;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -45,7 +60,7 @@ public class FormulaElement implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	public static enum ElementType {
-		OPERATOR, FUNCTION, NUMBER, SENSOR, USER_VARIABLE, USER_LIST, BRACKET, STRING
+		OPERATOR, FUNCTION, NUMBER, SENSOR, USER_VARIABLE, USER_LIST, BRACKET, STRING, COLLISION_FORMULA
 	}
 
 	public static final Double NOT_EXISTING_USER_VARIABLE_INTERPRETATION_VALUE = 0d;
@@ -138,6 +153,9 @@ public class FormulaElement implements Serializable {
 			case STRING:
 				internTokenList.add(new InternToken(InternTokenType.STRING, value));
 				break;
+			case COLLISION_FORMULA:
+				internTokenList.add(new InternToken(InternTokenType.COLLISION_FORMULA, this.value));
+				break;
 		}
 		return internTokenList;
 	}
@@ -159,6 +177,18 @@ public class FormulaElement implements Serializable {
 		}
 		if (type == ElementType.USER_VARIABLE && value.equals(oldName)) {
 			value = newName;
+		}
+	}
+
+	public void updateCollisionFormula(String oldName, String newName) {
+		if (leftChild != null) {
+			leftChild.updateCollisionFormula(oldName, newName);
+		}
+		if (rightChild != null) {
+			rightChild.updateCollisionFormula(oldName, newName);
+		}
+		if (type == ElementType.COLLISION_FORMULA && value.contains(oldName)) {
+			value = value.replace(oldName, newName);
 		}
 	}
 
@@ -193,8 +223,58 @@ public class FormulaElement implements Serializable {
 			case STRING:
 				returnValue = value;
 				break;
+			case COLLISION_FORMULA:
+				try {
+					returnValue = interpretCollision(value);
+				} catch (Exception exception) {
+					returnValue = 0d;
+					Log.e(getClass().getSimpleName(), Log.getStackTraceString(exception));
+				}
 		}
 		return normalizeDegeneratedDoubleValues(returnValue);
+	}
+
+	private Object interpretCollision(String formula) {
+		//Get Sprite names from formula
+		int start = 0;
+		int end = formula.indexOf(Constants.COLLIDES_WITH_TAG) - 1;
+		String firstSpriteName = formula.substring(start, end);
+
+		start = end + Constants.COLLIDES_WITH_TAG.length() + 2;
+		end = formula.length();
+		String secondSpriteName = formula.substring(start, end);
+
+		//Try to get the first look, if not found we don't have a collision
+		Look firstLook;
+		try {
+			firstLook = ProjectManager.getInstance().getCurrentProject().getSpriteByName(firstSpriteName).look;
+		} catch (NullPointerException exception) {
+			return 0d;
+		}
+
+		//Check for Finger Collision
+		if (secondSpriteName.compareTo(Constants.COLLISION_TYPE_TAPPED) == 0) {
+			if (firstLook.isTouched() && firstLook.isVisible()) {
+				return 1d;
+			}
+
+			return 0d;
+		}
+
+		//TODO: Remove
+		/*if (secondSpriteName.compareTo(Constants.COLLISION_TYPE_EDGE) == 0) {
+			//return CollisionDetection.checkEdgeCollision(firstLook);
+		}*/
+
+		//Check for Look Collision
+		Look secondLook;
+		try {
+			secondLook = ProjectManager.getInstance().getCurrentProject().getSpriteByName(secondSpriteName).look;
+		} catch (NullPointerException exception) {
+			return 0d;
+		}
+
+		return CollisionDetection.checkCollisionBetweenLooks(firstLook, secondLook);
 	}
 
 	private Object interpretUserList(Sprite sprite) {
@@ -633,7 +713,7 @@ public class FormulaElement implements Serializable {
 
 			Double left;
 			Double right;
-
+			
 			switch (operator) {
 				case PLUS:
 					left = interpretOperator(leftObject);
@@ -709,9 +789,6 @@ public class FormulaElement implements Serializable {
 			case OBJECT_BRIGHTNESS:
 				returnValue = (double) sprite.look.getBrightnessInUserInterfaceDimensionUnit();
 				break;
-			case OBJECT_COLOR:
-				returnValue = (double) sprite.look.getColorInUserInterfaceDimensionUnit();
-				break;
 			case OBJECT_TRANSPARENCY:
 				returnValue = (double) sprite.look.getTransparencyInUserInterfaceDimensionUnit();
 				break;
@@ -729,15 +806,6 @@ public class FormulaElement implements Serializable {
 				break;
 			case OBJECT_Y:
 				returnValue = (double) sprite.look.getYInUserInterfaceDimensionUnit();
-				break;
-			case OBJECT_ANGULAR_VELOCITY:
-				returnValue = (double) sprite.look.getAngularVelocityInUserInterfaceDimensionUnit();
-				break;
-			case OBJECT_X_VELOCITY:
-				returnValue = (double) sprite.look.getXVelocityInUserInterfaceDimensionUnit();
-				break;
-			case OBJECT_Y_VELOCITY:
-				returnValue = (double) sprite.look.getYVelocityInUserInterfaceDimensionUnit();
 				break;
 		}
 		return returnValue;

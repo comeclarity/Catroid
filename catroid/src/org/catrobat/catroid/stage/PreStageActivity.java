@@ -29,12 +29,17 @@ import android.content.Intent;
 import android.nfc.NfcAdapter;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.os.Vibrator;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.TextToSpeech.OnInitListener;
 import android.speech.tts.TextToSpeech.OnUtteranceCompletedListener;
 import android.util.Log;
+import android.view.View;
+import android.widget.LinearLayout;
 
 import org.catrobat.catroid.CatroidApplication;
 import org.catrobat.catroid.ProjectManager;
@@ -44,7 +49,9 @@ import org.catrobat.catroid.bluetooth.base.BluetoothDeviceService;
 import org.catrobat.catroid.camera.CameraManager;
 import org.catrobat.catroid.common.CatroidService;
 import org.catrobat.catroid.common.Constants;
+import org.catrobat.catroid.common.LookData;
 import org.catrobat.catroid.common.ServiceProvider;
+import org.catrobat.catroid.content.Sprite;
 import org.catrobat.catroid.content.bricks.Brick;
 import org.catrobat.catroid.devices.raspberrypi.RaspberryPiService;
 import org.catrobat.catroid.drone.DroneInitializer;
@@ -219,12 +226,43 @@ public class PreStageActivity extends BaseActivity {
 		}
 
 		if (requiredResourceCounter == Brick.NO_RESOURCES) {
-			startStage();
+			//startStage();
 		}
 
 		if ((requiredResources & Brick.SOCKET_RASPI) > 0) {
 			connectRaspberrySocket();
 		}
+
+		final Handler handler = new Handler() {
+			@Override
+			public void handleMessage(Message message) {
+				Log.i("asd","got message!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+				Log.i("asd","current thread: " + Thread.currentThread().getName() + ", Main Thread: " + Looper
+						.getMainLooper().getThread().getName());
+				startStage();
+			}
+		};
+		//getCollisionInformation();
+		//startStage();
+
+		Runnable collisionInformationRunnable = new Runnable() {
+			@Override
+			public void run() {
+				getCollisionInformation();
+				/*runOnUiThread(new Runnable() {
+					@Override
+					public void run() {
+						startStage();
+					}
+				});*/
+				handler.sendMessage(new Message());
+			}
+		};
+		Thread thread = new Thread(collisionInformationRunnable);
+		thread.start();
+		Log.i("asd","current thread: " + Thread.currentThread().getName() + ", Main Thread: " + Looper
+				.getMainLooper().getThread().getName());
+		startStage();
 	}
 
 	private void connectBTDevice(Class<? extends BluetoothDevice> service) {
@@ -406,7 +444,7 @@ public class PreStageActivity extends BaseActivity {
 		if (requiredResourceCounter == 0) {
 			if (failedResources.isEmpty()) {
 				Log.d(TAG, "Start Stage");
-				startStage();
+				//startStage();
 			} else {
 				showResourceFailedErrorDialog();
 			}
@@ -524,5 +562,32 @@ public class PreStageActivity extends BaseActivity {
 			// TODO: resourceFailed() & startActivityForResult(), if behaviour needed
 		}
 		resourceInitialized();
+	}
+
+	private void getCollisionInformation()
+	{
+		Log.i("Collision Detection", "Waiting for all calculation threads to finish");
+		for(Sprite s : ProjectManager.getInstance().getCurrentProject().getSpriteList())
+		{
+			for(LookData lookData : s.getLookDataList())
+			{
+				if(lookData.collisionPolygonCalculationThread == null)
+					continue;
+				try{
+					lookData.collisionPolygonCalculationThread.join();
+				}
+				catch (InterruptedException e)
+				{
+					Log.i("Collison Detection", "thread got interupted");
+				}
+			}
+		}
+		Log.i("Collision Detection", " all threads finished!");
+
+		for (Sprite s : ProjectManager.getInstance().getCurrentProject().getSpriteList()) {
+			for (LookData l : s.getLookDataList()) {
+				l.loadOrCreateCollisionPolygon();
+			}
+		}
 	}
 }

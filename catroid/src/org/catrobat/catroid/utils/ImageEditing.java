@@ -35,6 +35,14 @@ import org.catrobat.catroid.io.StorageHandler;
 import java.io.File;
 import java.io.FileNotFoundException;
 
+import ar.com.hjg.pngj.IImageLine;
+import ar.com.hjg.pngj.PngReader;
+import ar.com.hjg.pngj.PngWriter;
+import ar.com.hjg.pngj.chunks.ChunkCopyBehaviour;
+import ar.com.hjg.pngj.chunks.ChunkHelper;
+import ar.com.hjg.pngj.chunks.PngChunk;
+import ar.com.hjg.pngj.chunks.PngChunkTextVar;
+
 public final class ImageEditing {
 
 	public enum ResizeType {
@@ -223,4 +231,45 @@ public final class ImageEditing {
 
 		return inSampleSize;
 	}
+
+	public static String readMetaDataStringFromPNG(String absolutePath, String key) {
+        File image = new File(absolutePath);
+        PngReader pngr = new PngReader(image);
+        pngr.readSkippingAllRows();
+        for (PngChunk c : pngr.getChunksList().getChunks()) {
+            if (!ChunkHelper.isText(c)) {
+                continue;
+            }
+            PngChunkTextVar ct = (PngChunkTextVar) c;
+            String k = ct.getKey();
+            String val = ct.getVal();
+            if (key.equals(k)) {
+                pngr.close();
+                return val;
+            }
+        }
+        pngr.close();
+        return null;
+    }
+
+    public static void writeMetaDataStringToPNG(String absolutePath, String key, String value) {
+		String tempFilename = absolutePath.substring(0, absolutePath.length()-4) + "___temp.png";
+
+        File old_file = new File(absolutePath);
+        File new_file = new File(tempFilename);
+
+        PngReader pngr = new PngReader(old_file);
+        PngWriter pngw = new PngWriter(new_file, pngr.imgInfo, true);
+        pngw.copyChunksFrom(pngr.getChunksList(), ChunkCopyBehaviour.COPY_ALL);
+        pngw.getMetadata().setText(key, value);
+        for (int row = 0; row < pngr.imgInfo.rows; row++) {
+            IImageLine l1 = pngr.readRow();
+            pngw.writeRow(l1);
+        }
+        pngr.end();
+        pngw.end();
+
+        old_file.delete();
+        new_file.renameTo(new File(absolutePath));
+    }
 }

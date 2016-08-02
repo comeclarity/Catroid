@@ -33,7 +33,9 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
@@ -41,6 +43,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 
 import com.google.common.io.Files;
 
@@ -52,6 +55,7 @@ import org.catrobat.catroid.common.LookData;
 import org.catrobat.catroid.content.Sprite;
 import org.catrobat.catroid.content.bricks.PointToBrick.SpinnerAdapterWrapper;
 import org.catrobat.catroid.io.StorageHandler;
+import org.catrobat.catroid.sensing.CollisionPolygonCreationTask;
 import org.catrobat.catroid.ui.ProgramMenuActivity;
 import org.catrobat.catroid.ui.ScriptActivity;
 import org.catrobat.catroid.ui.SettingsActivity;
@@ -203,6 +207,7 @@ public class NewSpriteDialog extends DialogFragment {
 
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+		Log.d("PolygonCalculation", "onActivityResut in NewSpriteDialog");
 		super.onActivityResult(requestCode, resultCode, data);
 		if (resultCode == Activity.RESULT_OK) {
 			if (lookUri == null) {
@@ -409,7 +414,6 @@ public class NewSpriteDialog extends DialogFragment {
 			String imageFileName = newLookFile.getName();
 			Utils.rewriteImageFileForStage(getActivity(), newLookFile);
 
-			lookData.setLookFilename(imageFileName);
 			lookData.setLookName(newSpriteName);
 			lookData.setLookFilename(imageFileName);
 		} catch (IOException ioException) {
@@ -427,6 +431,11 @@ public class NewSpriteDialog extends DialogFragment {
 		Sprite sprite = new Sprite(newSpriteName);
 		projectManager.addSprite(sprite);
 		sprite.getLookDataList().add(lookData);
+
+		CollisionPolygonCreationTask creation_task = new CollisionPolygonCreationTask(lookData);
+		Thread creation_thread = new Thread(creation_task);
+		lookData.collisionPolygonCalculationThread = creation_thread;
+		creation_thread.start();
 
 		if (requestedAction == ActionAfterFinished.ACTION_UPDATE_SPINNER && spinnerAdapter != null) {
 			Intent broadcastIntent;

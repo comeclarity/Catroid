@@ -20,10 +20,35 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.catrobat.catroid.formulaeditor;
 
-public enum InternTokenType {
-	NUMBER, OPERATOR, FUNCTION_NAME, BRACKET_OPEN, BRACKET_CLOSE, SENSOR, FUNCTION_PARAMETERS_BRACKET_OPEN,
-	FUNCTION_PARAMETERS_BRACKET_CLOSE, FUNCTION_PARAMETER_DELIMITER, PERIOD, USER_VARIABLE, STRING, PARSER_END_OF_FILE,
-	USER_LIST, COLLISION_FORMULA
+package org.catrobat.catroid.sensing;
+
+import android.os.Process;
+import android.util.Log;
+
+import org.catrobat.catroid.common.LookData;
+
+public class CollisionPolygonCreationTask implements Runnable{
+
+	LookData lookdata;
+
+	public CollisionPolygonCreationTask(LookData lookdata)
+	{
+		this.lookdata = lookdata;
+	}
+
+	@Override
+	public void run() {
+		android.os.Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
+		long startTime = System.currentTimeMillis();
+		Log.i("Collision Detection","Creating polygon in runnable for " + lookdata.getLookFileName() );
+		lookdata.loadOrCreateCollisionPolygon();
+		if(lookdata.isCalculationThreadCancelled)
+			return;
+		long stopTime = System.currentTimeMillis();
+		long time = (stopTime - startTime) / 1000;
+		Log.i("Collision Detection","Finished Creating polygon in runnable for " + lookdata.getLookFileName() + " in "
+				+ "" + time +
+				" seconds." );
+	}
 }

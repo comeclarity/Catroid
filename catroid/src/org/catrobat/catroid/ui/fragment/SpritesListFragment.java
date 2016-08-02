@@ -54,6 +54,10 @@ import org.catrobat.catroid.common.SoundInfo;
 import org.catrobat.catroid.content.Project;
 import org.catrobat.catroid.content.Sprite;
 import org.catrobat.catroid.content.bricks.Brick;
+import org.catrobat.catroid.content.bricks.FormulaBrick;
+import org.catrobat.catroid.content.bricks.UserBrick;
+import org.catrobat.catroid.formulaeditor.DataContainer;
+import org.catrobat.catroid.formulaeditor.Formula;
 import org.catrobat.catroid.formulaeditor.DataContainer;
 import org.catrobat.catroid.io.LoadProjectTask;
 import org.catrobat.catroid.io.LoadProjectTask.OnLoadProjectCompleteListener;
@@ -373,7 +377,7 @@ public class SpritesListFragment extends ScriptActivityFragment implements Sprit
 				0));
 		String newName = copiedSprite.getName();
 
-		copiedSprite.updateCollisionBroadcastMessages(oldName, newName);
+		renameSpritesInCollisionFormulas(oldName, newName, getActivity());
 
 		ProjectManager projectManager = ProjectManager.getInstance();
 
@@ -427,6 +431,16 @@ public class SpritesListFragment extends ScriptActivityFragment implements Sprit
 	public void deleteSprite() {
 		ProjectManager projectManager = ProjectManager.getInstance();
 		DataContainer dataContainer = projectManager.getCurrentProject().getDataContainer();
+
+		for(LookData currentLookData : spriteToEdit.getLookDataList())
+		{
+			Thread collisionPolygonCalculationThread = currentLookData.collisionPolygonCalculationThread;
+			if(collisionPolygonCalculationThread != null)
+			{
+				Log.i("Delete Sprite", "interrupting running collisionPolygonCalculationThread");
+				currentLookData.cancelCollisionPolygonCalculation();
+			}
+		}
 
 		deleteSpriteFiles();
 		dataContainer.cleanVariableListForSprite(spriteToEdit);
@@ -517,7 +531,8 @@ public class SpritesListFragment extends ScriptActivityFragment implements Sprit
 		public void onReceive(Context context, Intent intent) {
 			if (intent.getAction().equals(ScriptActivity.ACTION_SPRITE_RENAMED)) {
 				String newSpriteName = intent.getExtras().getString(RenameSpriteDialog.EXTRA_NEW_SPRITE_NAME);
-				spriteToEdit.rename(newSpriteName);
+				spriteToEdit.setName(newSpriteName);
+				renameSpritesInCollisionFormulas(spriteToEdit.getName(), newSpriteName, getActivity());
 			}
 		}
 	}
@@ -806,5 +821,24 @@ public class SpritesListFragment extends ScriptActivityFragment implements Sprit
 			}
 		}
 		return newName;
+	}
+
+	private void renameSpritesInCollisionFormulas(String oldName, String newName, Context context) {
+		if (ProjectManager.getInstance().getCurrentScript() == null) {
+			return;
+		}
+		List<Brick> brickList = ProjectManager.getInstance().getCurrentScript().getBrickList();
+		for (Brick brick : brickList) {
+			if (brick instanceof UserBrick) {
+				List<Formula> formulaList = ((UserBrick) brick).getFormulas();
+				for (Formula formula : formulaList) {
+					formula.updateCollisionFormulas(oldName, newName, context);
+				}
+			}
+			if (brick instanceof FormulaBrick) {
+				Formula formula = ((FormulaBrick) brick).getFormula();
+				formula.updateCollisionFormulas(oldName, newName, context);
+			}
+		}
 	}
 }

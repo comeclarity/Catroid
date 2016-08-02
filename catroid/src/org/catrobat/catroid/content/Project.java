@@ -162,6 +162,15 @@ public class Project implements Serializable {
 		return this.xmlHeader;
 	}
 
+	public Sprite getSpriteByName(String name) {
+		for (Sprite sprite : spriteList) {
+			if (sprite.getName().compareTo(name) == 0) {
+				return sprite;
+			}
+		}
+		return null;
+	}
+
 	public int getRequiredResources() {
 		int resources = Brick.NO_RESOURCES;
 		ActionFactory physicsActionFactory = new ActionPhysicsFactory();

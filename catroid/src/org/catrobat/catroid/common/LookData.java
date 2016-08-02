@@ -24,6 +24,7 @@ package org.catrobat.catroid.common;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.PointF;
 import android.util.Log;
 
 import com.badlogic.gdx.Gdx;
@@ -31,16 +32,20 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Polygon;
 import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.thoughtworks.xstream.annotations.XStreamAsAttribute;
 
 import org.catrobat.catroid.ProjectManager;
 import org.catrobat.catroid.content.bricks.Brick;
+import org.catrobat.catroid.sensing.CollisionDetection;
+import org.catrobat.catroid.sensing.CollisionPolygonVertex;
 import org.catrobat.catroid.utils.ImageEditing;
 import org.catrobat.catroid.utils.Utils;
 
 import java.io.FileNotFoundException;
 import java.io.Serializable;
+import java.util.ArrayList;
 
 public class LookData implements Serializable, Cloneable {
 	private static final long serialVersionUID = 1L;
@@ -58,6 +63,10 @@ public class LookData implements Serializable, Cloneable {
 	protected transient Pixmap originalPixmap = null;
 	protected transient TextureRegion textureRegion = null;
 	public transient boolean isBackpackLookData = false;
+	protected transient Polygon[] collisionPolygons;
+	public transient Thread collisionPolygonCalculationThread = null;
+	public transient boolean isCalculationThreadCancelled = false;
+
 
 	public LookData() {
 	}
@@ -92,6 +101,7 @@ public class LookData implements Serializable, Cloneable {
 
 		cloneLookData.name = this.name;
 		cloneLookData.fileName = this.fileName;
+		cloneLookData.collisionPolygons = this.collisionPolygons.clone();
 		String filePath = getPathToImageDirectory() + "/" + fileName;
 		cloneLookData.isBackpackLookData = false;
 		try {
@@ -238,4 +248,53 @@ public class LookData implements Serializable, Cloneable {
 	public int getRequiredResources() {
 		return Brick.NO_RESOURCES;
 	}
+
+	public Polygon[] getCollisionPolygons() {
+		if (collisionPolygons == null) loadOrCreateCollisionPolygon();
+		return collisionPolygons;
+	}
+
+	public void loadOrCreateCollisionPolygon() {
+		if (collisionPolygons == null) {
+			collisionPolygons = CollisionDetection.getCollisionPolygonFromPNGMeta(getAbsolutePath());
+				if (collisionPolygons == null) {
+					if(isCalculationThreadCancelled)
+						return;
+				ArrayList<ArrayList<CollisionPolygonVertex>> boundingPolygon = CollisionDetection.createBoundingPolygon
+						(getAbsolutePath(), this);
+					if(boundingPolygon == null)
+						return;
+					if(isCalculationThreadCancelled)
+						return;
+				collisionPolygons = new Polygon[boundingPolygon.size()];
+				for (int i = 0; i < boundingPolygon.size(); i++) {
+					if(isCalculationThreadCancelled)
+						return;
+					ArrayList<PointF> points = CollisionDetection.getPointsFromPolygon(boundingPolygon.get(i));
+					ArrayList<PointF> smoothed = CollisionDetection.smoothPolygon(points, 0, points.size() - 1, 10f);
+					if (smoothed.size() < 5)
+						smoothed = points;
+
+					collisionPolygons[i] = CollisionDetection.createPolygonFromPoints(CollisionDetection.fitToGridSize
+							(smoothed));
+				}
+				if(isCalculationThreadCancelled)
+					return;
+				CollisionDetection.writeCollisionVerticesToPNGMeta(collisionPolygons, getAbsolutePath());
+			}
+		}
+
+		/*
+		Log.d("DebugVertices", "Smoothed");
+		for (Polygon p : collisionPolygons) {
+			CollisionDetection.printDebugVertices(p);
+		}
+		*/
+	}
+
+	public void cancelCollisionPolygonCalculation()
+	{
+		isCalculationThreadCancelled = true;
+	}
+
 }

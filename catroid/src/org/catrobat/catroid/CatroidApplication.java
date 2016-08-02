@@ -26,6 +26,7 @@ import android.content.Context;
 import android.support.multidex.MultiDex;
 import android.support.multidex.MultiDexApplication;
 import android.util.Log;
+import org.catrobat.catroid.common.Constants;
 
 import com.parrot.freeflight.settings.ApplicationSettings;
 
@@ -46,6 +47,9 @@ public class CatroidApplication extends MultiDexApplication {
 		Log.d(TAG, "CatroidApplication onCreate");
 		settings = new ApplicationSettings(this);
 		CatroidApplication.context = getApplicationContext();
+		Constants.COLLIDES_WITH_TAG = getBaseContext().getString(R.string.formula_editor_function_collision);
+		//Constants.COLLISION_TYPE_TAPPED = getBaseContext().getString(R.string.formula_editor_collision_type_tapped);
+		//Constants.COLLISION_TYPE_EDGE = getBaseContext().getString(R.string.formula_editor_collision_type_edge);
 	}
 
 	@Override

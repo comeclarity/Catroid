@@ -468,7 +468,6 @@ public class LookFragment extends ScriptActivityFragment implements LookBaseAdap
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
-
 		lastReceivedIntent = data;
 		if (resultCode == Activity.RESULT_OK) {
 			switch (requestCode) {

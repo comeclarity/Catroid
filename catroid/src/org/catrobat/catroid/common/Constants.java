@@ -161,6 +161,13 @@ public final class Constants {
 	public static final String PROJECT_OPENED_FROM_PROJECTS_LIST = "projectList";
 	public static final String MEDIA_TYPE_LOOK = "look";
 	public static final String MEDIA_TYPE_SOUND = "sound";
+	public static final String COLLISION_META_TAG_KEY = "CollisionPolygonVertices";
+	public static String COLLIDES_WITH_TAG = "";
+	public static String COLLISION_TYPE_TAPPED = "tapped";
+	public static String COLLISION_TYPE_EDGE = "";
+	public static final int COLLISION_WITH_FINGER_AREA_SIZE = 100;
+	public static final int COLLISION_WITH_FINGER_PIXEL_TRESHHOLD = 20;
+	public static final int COLLISION_GRID_SIZE = 1;
 	public static final String NO_VARIABLE_SELECTED = "No variable set";
 	public static final String PROJECT_UPLOAD_NAME = "projectUploadName";
 	public static final String PROJECT_UPLOAD_DESCRIPTION = "setProjectDescription";
