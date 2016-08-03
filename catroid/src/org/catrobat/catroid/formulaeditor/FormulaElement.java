@@ -1078,6 +1078,9 @@ public class FormulaElement implements Serializable {
 				default:
 			}
 		}
+		if (type == ElementType.COLLISION_FORMULA) {
+			resources |=Brick.COLLISION;
+		}
 		return resources;
 	}
 }

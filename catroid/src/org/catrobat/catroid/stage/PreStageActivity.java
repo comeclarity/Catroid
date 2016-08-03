@@ -91,7 +91,6 @@ public class PreStageActivity extends BaseActivity implements GatherCollisionInf
 
 	private Intent returnToActivityIntent = null;
 
-	public boolean collisonInformationAvailable = false;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -101,7 +100,6 @@ public class PreStageActivity extends BaseActivity implements GatherCollisionInf
 		if (isFinishing()) {
 			return;
 		}
-
 
 		setContentView(R.layout.activity_prestage);
 
@@ -230,44 +228,14 @@ public class PreStageActivity extends BaseActivity implements GatherCollisionInf
 		}
 
 		if (requiredResourceCounter == Brick.NO_RESOURCES) {
-			//startStage();
+			startStage();
 		}
 
 		if ((requiredResources & Brick.SOCKET_RASPI) > 0) {
 			connectRaspberrySocket();
 		}
-/*
-		final Handler handler = new Handler() {
-			@Override
-			public void handleMessage(Message message) {
-				Log.i("asd","got message!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-				Log.i("asd","current thread: " + Thread.currentThread().getName() + ", Main Thread: " + Looper
-						.getMainLooper().getThread().getName());
-				startStage();
-			}
-		};
-		//getCollisionInformation();
-		//startStage();
 
-		Runnable collisionInformationRunnable = new Runnable() {
-			@Override
-			public void run() {
-				getCollisionInformation();
-				/*runOnUiThread(new Runnable() {
-					@Override
-					public void run() {
-						startStage();
-					}
-				});
-				handler.sendMessage(new Message());
-			}
-		};
-		Thread thread = new Thread(collisionInformationRunnable);
-		thread.start();
-		Log.i("asd","current thread: " + Thread.currentThread().getName() + ", Main Thread: " + Looper
-				.getMainLooper().getThread().getName());
-		startStage();*/
-		GatherCollisionInformationTask task = new GatherCollisionInformationTask(this, this);
+		GatherCollisionInformationTask task = new GatherCollisionInformationTask(this);
 		task.execute();
 
 	}
@@ -451,7 +419,7 @@ public class PreStageActivity extends BaseActivity implements GatherCollisionInf
 		if (requiredResourceCounter == 0) {
 			if (failedResources.isEmpty()) {
 				Log.d(TAG, "Start Stage");
-				//startStage();
+				startStage();
 			} else {
 				showResourceFailedErrorDialog();
 			}
@@ -601,6 +569,6 @@ public class PreStageActivity extends BaseActivity implements GatherCollisionInf
 	@Override
 	public void onFinished() {
 		Log.i("das", "onfinished!");
-		startStage();
+		resourceInitialized();
 	}
 }

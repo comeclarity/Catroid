@@ -61,42 +61,27 @@ import org.catrobat.catroid.ui.dialogs.CustomAlertDialogBuilder;
 
 public class GatherCollisionInformationTask extends AsyncTask<Void, Void, Boolean> {
 
-	private PreStageActivity preStageActivity;
-	private LinearLayout linearLayoutProgressCircle;
 	private OnPolygonLoadedListener listener;
 
 
-
-	public GatherCollisionInformationTask(PreStageActivity activity, OnPolygonLoadedListener listener) {
-		this.preStageActivity = activity;
+	public GatherCollisionInformationTask(OnPolygonLoadedListener listener) {
 		this.listener = listener;
 	}
 
 	@Override
 	protected void onPreExecute() {
 		super.onPreExecute();
-		if (preStageActivity == null) {
-			return;
-		}
-		linearLayoutProgressCircle = (LinearLayout) preStageActivity.findViewById(R.id.progress_circle);
-		linearLayoutProgressCircle.setVisibility(View.VISIBLE);
-		linearLayoutProgressCircle.bringToFront();
-
 	}
 
 	@Override
 	protected Boolean doInBackground(Void... arg0) {
 		getCollisionInformation();
-		preStageActivity.collisonInformationAvailable = true;
-
 		return true;
 	}
 
 	@Override
 	protected void onPostExecute(Boolean success) {
 		super.onPostExecute(success);
-		linearLayoutProgressCircle.setVisibility(View.GONE);
-		preStageActivity.collisonInformationAvailable = true;
 		Log.i("GatherCollisionInfo", "finished task");
 		listener.onFinished();
 	}
