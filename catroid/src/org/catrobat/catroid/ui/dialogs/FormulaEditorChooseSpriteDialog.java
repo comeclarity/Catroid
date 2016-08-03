@@ -38,7 +38,6 @@ import android.widget.SpinnerAdapter;
 import org.catrobat.catroid.ProjectManager;
 import org.catrobat.catroid.R;
 import org.catrobat.catroid.content.Sprite;
-import org.catrobat.catroid.ui.fragment.FormulaEditorListFragment;
 import org.catrobat.catroid.utils.ToastUtil;
 
 import java.util.ArrayList;

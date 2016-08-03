@@ -732,14 +732,11 @@ public class StageListener implements ApplicationListener {
 		Gdx.gl20.glLineWidth(lineWidth / camera.zoom);
 		for(Sprite sprite : sprites.subList(1,sprites.size()))
 		{
-			if(!sprite.isBackgroundObject)
+			Polygon[] polygons_for_sprite = sprite.look.getCurrentCollisionPolygon();
+			if(polygons_for_sprite != null)
 			{
-				Polygon[] polygons_for_sprite = sprite.look.getCurrentCollisionPolygon();
-				if(polygons_for_sprite != null)
-				{
-					for(Polygon polygon_to_draw : polygons_for_sprite)
-						collisionPolygonDebugRenderer.polygon(polygon_to_draw.getTransformedVertices());
-				}
+				for(Polygon polygon_to_draw : polygons_for_sprite)
+					collisionPolygonDebugRenderer.polygon(polygon_to_draw.getTransformedVertices());
 			}
 		}
 		collisionPolygonDebugRenderer.end();

@@ -836,7 +836,8 @@ public class SpritesListFragment extends ScriptActivityFragment implements Sprit
 				}
 			}
 			if (brick instanceof FormulaBrick) {
-				Formula formula = ((FormulaBrick) brick).getFormula();
+				//was: Formula formula = ((FormulaBrick) brick).getFormula();
+				Formula formula = ((FormulaBrick) brick).getFormulas().get(0);
 				formula.updateCollisionFormulas(oldName, newName, context);
 			}
 		}

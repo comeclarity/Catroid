@@ -72,6 +72,7 @@ public class LoadProjectTask extends AsyncTask<Void, Void, Boolean> {
 		linearLayoutProgressCircle = (LinearLayout) activity.findViewById(R.id.progress_circle);
 		linearLayoutProgressCircle.setVisibility(View.VISIBLE);
 		linearLayoutProgressCircle.bringToFront();
+
 	}
 
 	@Override
