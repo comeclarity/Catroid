@@ -373,6 +373,8 @@ public class Sprite implements Serializable, Cloneable {
 		cloneLook(cloneSprite);
 		setUserAndVariableBrickReferences(cloneSprite, userBricks);
 
+		ProjectManager.getInstance().addSprite(cloneSprite);
+
 		ProjectManager.getInstance().setCurrentSprite(originalSprite);
 
 		return cloneSprite;

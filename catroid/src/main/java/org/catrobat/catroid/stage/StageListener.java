@@ -281,6 +281,7 @@ public class StageListener implements ApplicationListener {
 		DataContainer userVariables = currentScene.getDataContainer();
 		userVariables.removeVariableListForSprite(sprite);
 
+		currentScene.removeSprite(sprite);
 		BroadcastHandler.getScriptSpriteMap().remove(sprite);
 
 		sprite.look.setLookVisible(false);
@@ -394,6 +395,7 @@ public class StageListener implements ApplicationListener {
 			scene.firstStart = true;
 			scene.getDataContainer().resetAllDataObjects();
 		}
+		disposeClonedSprites();
 
 		FlashUtil.reset();
 		VibratorUtil.reset();
